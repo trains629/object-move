@@ -8,6 +8,10 @@
   },
   "author": "trains629",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trains629/object-move.git"
+  },
   "devDependencies": {
     "jest": "^23.6.0",
     "lodash": "^4.17.10"
