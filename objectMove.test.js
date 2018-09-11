@@ -47,3 +47,10 @@ test("t2.t5[0] swap t7[0]t4",()=>{
   log(t3);
   expect(_get(t3,"t2.t5[0]")).toBe("hello");
 });
+
+test("delete t7[3]",()=>{
+  let val1 = deleteByPath(t3,"t7[3]");
+  expect(t3["t7"][3]).toBeUndefined();
+  console.log(val1);
+  expect(val1).toBe(4);
+})
