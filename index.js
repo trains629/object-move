@@ -12,6 +12,7 @@ const get = require('lodash/get');
 const castPath = require('lodash/_castPath');
 const toKey = require('lodash/_toKey');
 const _cloneDeep = require('lodash/cloneDeep');
+const rep = /(?!^0\d+)^\d+$/;
 
 function cloneDeep(obj1){
  return obj1 && typeof obj1 === "object" ? _cloneDeep(obj1):obj1;
@@ -82,10 +83,38 @@ exports.swapByPath = function (object,sourcePath,targetPath) {
  return true;
 };
 
-exports.moveByPath = function (object,sourcePath,targetPath) {
- let obj1 = cloneDeep(isString(sourcePath)? get(object,sourcePath):sourcePath);
- if(isString(sourcePath))deleteByPath(object,sourcePath);
- walk(object,targetPath,true,function(key,index,path,item){
+function fixPath(sourcePath,targetPath) {
+  if(!isString(sourcePath) || !isString(targetPath))return targetPath;
+  let sourceList = castPath(sourcePath);
+  let targetList = castPath(targetPath);
+  let fixed = false;
+  let sl = sourceList.length;
+  let tl = targetList.length;
+  for (let i = 0; i < sl; i++) {
+    if(i >= tl)return targetPath;
+    let sid = sourceList[i],tid = targetList[i];
+    if(tid === sid)continue;
+    if(!(rep.test(tid) && rep.test(sid)))return targetPath;
+    let sn = parseInt(sid,10);
+    let tn = parseInt(tid,10);
+    if(sn < tn && tl > sl){
+      fixed = true;
+      targetList[i] = tn - 1;
+      break;
+    }
+  }
+
+  return fixed ?targetList.map((v)=> rep.test(v)?`[${v}]`:v).join("") :
+    targetPath;
+}
+
+function moveByPath(object,sourcePath,targetPath) {
+  if(!isString(targetPath))return;
+  if(targetPath === sourcePath)return;
+  if(isString(sourcePath))targetPath = fixPath(sourcePath,targetPath);
+  let obj1 = cloneDeep(isString(sourcePath)? get(object,sourcePath):sourcePath);
+  if(isString(sourcePath))deleteByPath(object,sourcePath);
+  walk(object,targetPath,true,function(key,index,path,item){
    if(index < path.length-1)return ;
    if(!Array.isArray(item)){
      item[key] = obj1;
@@ -99,6 +128,7 @@ exports.moveByPath = function (object,sourcePath,targetPath) {
      }
    item.splice(id,0,obj1);
  });
-};
+}
 
+exports.moveByPath = moveByPath;
 exports.deleteByPath = deleteByPath;
