@@ -1,6 +1,6 @@
 {
   "name": "object-move",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -14,6 +14,6 @@
   },
   "devDependencies": {
     "jest": "^23.6.0",
-    "lodash": "^4.17.10"
+    "lodash": "^4.17.15"
   }
 }

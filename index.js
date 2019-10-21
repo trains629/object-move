@@ -7,94 +7,98 @@
  2. 在指定位置添加对象
  3. 将指定位置的对象移到指定位置
  */
- const set = require('lodash/set');
- const get = require('lodash/get');
- const castPath = require('lodash/_castPath');
- const toKey = require('lodash/_toKey');
- const cloneDeep = require('lodash/cloneDeep');
+const set = require('lodash/set');
+const get = require('lodash/get');
+const castPath = require('lodash/_castPath');
+const toKey = require('lodash/_toKey');
+const _cloneDeep = require('lodash/cloneDeep');
+
+function cloneDeep(obj1){
+ return obj1 && typeof obj1 === "object" ? _cloneDeep(obj1):obj1;
+}
+
+function isString(value){
+ return typeof value === "string";
+}
+
+function isNumber(value){
+ return typeof value === "number";
+}
 
 function checkInt(value) {
-  if(typeof value !== "string")return null;
-  let result = parseInt(value);
-  return result.toString() == value ? result:null;
+ if(!isString(value))return null;
+ let result = parseInt(value);
+ return result.toString() == value ? result:null;
 }
 
 function arrayRemoveById(object,id) {
-  if(Array.isArray(object))
-    if(typeof id == "number" && id>=0 && id< object.length)
-      object.splice(id,1);
+ if(Array.isArray(object))
+   if(isNumber(id) && id>=0 && id< object.length)
+     object.splice(id,1);
 }
 
 function walk(object,path,insert,callBack) {
-  if(typeof insert == "function"){
-    callBack = insert;
-    insert = false;
-  }
-  if(typeof callBack != "function")return ;
-  path = castPath(path, object);
-  var index = 0,length = path.length;
-  let initValue = (key,id)=>{
-    if(!insert)return ;
-    let tkey = id <= length-1 ? toKey(path[id]):"";
-    if(tkey && object[key] == undefined)
-      object[key] = checkInt(tkey) == null ? {}:[];
-  }
-  while (object != null && index < length) {
-    let key = toKey(path[index]);
-    initValue(key,index+1);
-    callBack(key,index,path,object);
-    object = object[key];
-    index++;
-  }
+ if(typeof insert == "function"){
+   callBack = insert;
+   insert = false;
+ }
+ if(typeof callBack != "function")return ;
+ path = castPath(path, object);
+ var index = 0,length = path.length;
+ let initValue = function(key,id){
+   if(!insert)return ;
+   let tkey = id <= length-1 ? toKey(path[id]):"";
+   if(tkey && object[key] == undefined)
+     object[key] = checkInt(tkey) == null ? {}:[];
+ }
+ while (object != null && index < length) {
+   let key = toKey(path[index]);
+   initValue(key,index+1);
+   callBack(key,index,path,object);
+   object = object[key];
+   index++;
+ }
 }
 
 function deleteByPath(object,path1) {
-  let result;
-  walk(object,path1,(key,index,path,object)=>{
-    if(index < path.length-1)return ;
-    result = cloneDeep(object[key]);
-    if(Array.isArray(object))
-      arrayRemoveById(object,checkInt(key));
-    else
-      delete object[key];
-  });
-  return result;
+ let result;
+ walk(object,path1,function(key,index,path,object){
+   if(index < path.length-1)return ;
+   result = cloneDeep(object[key]);
+   if(Array.isArray(object))
+     arrayRemoveById(object,checkInt(key));
+   else
+     delete object[key];
+ });
+ return result;
 }
 
 exports.swapByPath = function (object,sourcePath,targetPath) {
-  let tpath1 = castPath(targetPath, object);
-  let tpath2 = castPath(sourcePath, object);
-  // 需要对数据进行备份
-  let obj1 = get(object,targetPath);
-  let obj2 = get(object,sourcePath);
-  if(obj1 == undefined || obj2 == undefined)return false;
-  set(object,sourcePath,obj1);
-  set(object,targetPath,obj2);
-  return true;
+ let obj1 = get(object,targetPath);
+ let obj2 = get(object,sourcePath);
+ if(obj1 == undefined || obj2 == undefined)return false;
+ set(object,sourcePath,obj1);
+ set(object,targetPath,obj2);
+ return true;
 };
 
 exports.moveByPath = function (object,sourcePath,targetPath) {
-  let obj1 = typeof sourcePath == "string" ? get(object,sourcePath):sourcePath;
-  if(typeof sourcePath == "string"){
-    deleteByPath(object,sourcePath);
-  }
-  walk(object,targetPath,true,(key,index,path,object)=>{
-    if(index < path.length-1)return ;
-    if(Array.isArray(object)){//为数组就插入进去
-      let id =checkInt(key);
-      if(typeof id == "number"){
-        if(id > object.length){
-          for (var i = object.length; i < id; i++) {
-            object.push(undefined);
-          }
-        }
-        object.splice(id,0,obj1);
-      }
-      return ;
-    }
-    object[key] = obj1;
-  });
-
+ let obj1 = cloneDeep(isString(sourcePath)? get(object,sourcePath):sourcePath);
+ if(isString(sourcePath))deleteByPath(object,sourcePath);
+ walk(object,targetPath,true,function(key,index,path,item){
+   if(index < path.length-1)return ;
+   if(!Array.isArray(item)){
+     item[key] = obj1;
+     return;
+   }
+   let id =checkInt(key);
+   if(!isNumber(id))return;
+   if(id > item.length)
+     for (var i = item.length; i < id; i++) {
+       item.push(undefined);
+     }
+   item.splice(id,0,obj1);
+ });
 };
 
 exports.deleteByPath = deleteByPath;
